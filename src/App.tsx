@@ -53,8 +53,15 @@ const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
   const sessionId = useMemo(makeSessionId, []);
   const [scheduledStart, setScheduledStart] = useState(getLiveStartFromUrl);
   const [initialTime] = useState(() => mode === "live" ? Math.max(0, (Date.now() - scheduledStart.getTime()) / 1000) : 0);
+  const [liveStarted, setLiveStarted] = useState(() => mode !== "live" || Date.now() >= scheduledStart.getTime());
   const clockRef = useRef<FakeMediaClock | null>(null);
-  if (!clockRef.current) clockRef.current = new FakeMediaClock(mode === "live" ? LIVE_DURATION : REPLAY_DURATION, initialTime, mode === "live");
+  if (!clockRef.current) {
+    clockRef.current = new FakeMediaClock(
+      mode === "live" ? LIVE_DURATION : REPLAY_DURATION,
+      initialTime,
+      mode === "live" && liveStarted && initialTime < LIVE_DURATION,
+    );
+  }
   const clock = clockRef.current;
   const snapshot = useClock(clock);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
@@ -75,6 +82,8 @@ const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
     // Embedded playback should show the first usable frame directly without
     // the Viewer intro shader transition.
     url.searchParams.set("test_first_frame_shader", "false");
+    // Bust cached Viewer documents after changing the URL-based ZIP loader.
+    url.searchParams.set("sync_rev", "zip-source-v2");
     url.searchParams.set("test_start_time", String(Math.floor(initialTime)));
     return url.toString();
   }, [mode, sessionId, initialTime]);
@@ -93,9 +102,21 @@ const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
     };
   }, [clock, mode, sessionId]);
 
-  const liveDuration = status.duration && status.duration > 0 ? status.duration : LIVE_DURATION;
+  // The broadcast schedule is the authoritative live boundary. Viewer
+  // duration may describe only a loaded segment while it is still buffering.
   const liveEnded = mode === "live"
-    && snapshot.currentTime >= liveDuration;
+    && snapshot.currentTime >= LIVE_DURATION;
+
+  useEffect(() => {
+    if (mode !== "live" || liveStarted) return;
+    const delay = Math.max(0, scheduledStart.getTime() - Date.now());
+    const timer = window.setTimeout(() => {
+      setLiveStarted(true);
+      clock.seek(0);
+      clock.play();
+    }, delay);
+    return () => window.clearTimeout(timer);
+  }, [clock, liveStarted, mode, scheduledStart]);
 
   useEffect(() => {
     if (!liveEnded) {
@@ -147,13 +168,15 @@ const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
     </header>
     <section className="stage">
       <div className="viewer-wrap">
-        {viewerClosed ? <div className="viewer-closed" role="status">直播已结束</div> : <iframe ref={iframeRef} title="super4D viewer" src={viewerUrl} allowFullScreen />}
+        {viewerClosed ? <div className="viewer-closed" role="status">直播已结束</div> : !liveStarted && mode === "live" ? <div className="viewer-closed" role="status">直播尚未开始</div> : <iframe ref={iframeRef} title="super4D viewer" src={viewerUrl} allowFullScreen />}
       </div>
       <div className="controls">
-        {mode === "live" ? <><label>直播开始时间 <input type="datetime-local" value={scheduledValue} onChange={(event) => { const next = new Date(event.target.value); setScheduledStart(next); clock.seek(Math.max(0, (Date.now() - next.getTime()) / 1000)); }} /></label><p className="hint">当前使用本地 timtalk_1h.4dv，直播时长按 1 小时模拟。</p></> : null}
+        {mode === "live" ? <><label>直播开始时间 <input type="datetime-local" value={scheduledValue} onChange={(event) => { const next = new Date(event.target.value); const nextStarted = Date.now() >= next.getTime(); setScheduledStart(next); setLiveStarted(nextStarted); clock.seek(Math.max(0, (Date.now() - next.getTime()) / 1000)); if (nextStarted) clock.play(); else clock.pause(); }} /></label><p className="hint">当前使用本地 timtalk_1h.4dv，直播时长按 1 小时模拟。</p></> : null}
         {liveEnded ? <div className="ended-banner" role="status">直播已结束</div> : null}
-        {mode === "replay" ? <input aria-label="主页面录播进度条" type="range" min="0" max={snapshot.duration} step="0.01" value={snapshot.currentTime} onPointerDown={beginSeek} onChange={(event) => { if (dragging) clock.seek(Number(event.target.value)); }} onPointerUp={(event) => commitSeek(Number((event.target as HTMLInputElement).value))} /> : <div className="live-progress"><span style={{ width: `${Math.min(100, snapshot.currentTime / snapshot.duration * 100)}%` }} /></div>}
-        <div className="button-row"><button onClick={togglePlay}>{snapshot.playing ? "暂停" : "播放"}</button><button onClick={changeRate}>倍速 {snapshot.playbackRate.toFixed(1)}x</button><strong>{formatTime(snapshot.currentTime)} / {formatTime(snapshot.duration)}</strong></div>
+        {liveStarted || mode !== "live" ? <>
+          {mode === "replay" ? <input aria-label="主页面录播进度条" type="range" min="0" max={snapshot.duration} step="0.01" value={snapshot.currentTime} onPointerDown={beginSeek} onChange={(event) => { if (dragging) clock.seek(Number(event.target.value)); }} onPointerUp={(event) => commitSeek(Number((event.target as HTMLInputElement).value))} /> : <div className="live-progress"><span style={{ width: `${Math.min(100, snapshot.currentTime / snapshot.duration * 100)}%` }} /></div>}
+          <div className="button-row"><button onClick={togglePlay}>{snapshot.playing ? "暂停" : "播放"}</button><button onClick={changeRate}>倍速 {snapshot.playbackRate.toFixed(1)}x</button><strong>{formatTime(snapshot.currentTime)} / {formatTime(snapshot.duration)}</strong></div>
+        </> : null}
       </div>
       <SyncDiagnostics status={status} snapshot={snapshot} sessionId={sessionId} />
     </section>

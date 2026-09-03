@@ -15,13 +15,14 @@ export class MediaSyncController {
   private readonly normalizedViewerOrigin: string;
   private status: ViewerStatus = { ready: false, loading: false, currentTime: null, duration: null, lastMessage: "等待 Viewer iframe 加载", error: null, lastSequence: -1, subtitle: { tracks: [], selectedTrackId: "", visible: true, maskVisible: false, fontScale: 1, verticalOffset: 0, error: null }, performance: null };
 
-  constructor(private readonly iframe: HTMLIFrameElement, viewerOrigin: string, private readonly mode: SyncMode, private readonly sessionId: string, private readonly clock: FakeMediaClock) {
+  constructor(private readonly iframe: HTMLIFrameElement, viewerOrigin: string, private readonly mode: SyncMode, private readonly sessionId: string, private readonly clock: FakeMediaClock, private readonly syncLogEnabled = false) {
     const parsed = new URL(viewerOrigin);
     if (parsed.protocol !== "http:" && parsed.protocol !== "https:") throw new Error(`不支持的 Viewer origin: ${viewerOrigin}`);
     this.normalizedViewerOrigin = parsed.origin;
   }
 
   private log(event: string, payload: Record<string, unknown> = {}) {
+    if (!this.syncLogEnabled) return;
     console.log(`[SUPER4D_SYNC][DEMO] ${event}`, JSON.stringify(payload));
   }
 
@@ -96,7 +97,7 @@ export class MediaSyncController {
     // event is the single handshake trigger; INIT is never sent speculatively
     // before the Viewer document has installed its message listener.
     this.timer = window.setInterval(() => {
-      if (this.viewerResponded && !this.status.loading && !this.seeking) {
+      if (this.viewerResponded && this.clock.getSnapshot().playing && !this.status.loading && !this.seeking) {
         this.send("SYNC_STATE");
       }
     }, 400);

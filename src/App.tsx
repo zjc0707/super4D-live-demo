@@ -74,6 +74,10 @@ const SubtitleControls = ({ subtitle, controller }: { subtitle: SubtitleState; c
 
 const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
   const sessionId = useMemo(makeSessionId, []);
+  const syncLogEnabled = useMemo(() => {
+    const value = new URLSearchParams(window.location.search).get("sync_log");
+    return value === "1" || value === "true";
+  }, []);
   const [scheduledStart, setScheduledStart] = useState(getLiveStartFromUrl);
   const [initialTime] = useState(() => mode === "live" ? Math.max(0, (Date.now() - scheduledStart.getTime()) / 1000) : 0);
   const [liveStarted, setLiveStarted] = useState(() => mode !== "live" || Date.now() >= scheduledStart.getTime());
@@ -104,6 +108,7 @@ const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
     url.searchParams.set("parent_origin", window.location.origin);
     url.searchParams.set("session_id", sessionId);
     url.searchParams.set("noui", "1");
+    if (syncLogEnabled) url.searchParams.set("sync_log", "1");
     // Embedded playback should show the first usable frame directly without
     // the Viewer intro shader transition.
     url.searchParams.set("test_first_frame_shader", "false");
@@ -114,12 +119,12 @@ const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
     url.searchParams.set("sync_rev", "zip-source-v2");
     url.searchParams.set("test_start_time", String(Math.floor(initialTime)));
     return url.toString();
-  }, [mode, sessionId, initialTime]);
+  }, [mode, sessionId, initialTime, syncLogEnabled]);
 
   useLayoutEffect(() => {
     const iframe = iframeRef.current;
     if (!iframe) return;
-    const controller = new MediaSyncController(iframe, VIEWER_ORIGIN, mode, sessionId, clock);
+    const controller = new MediaSyncController(iframe, VIEWER_ORIGIN, mode, sessionId, clock, syncLogEnabled);
     controllerRef.current = controller;
     const unsubscribe = controller.subscribe(() => setStatus(controller.getStatus()));
     controller.start();
@@ -128,7 +133,7 @@ const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
       controller.stop();
       controllerRef.current = null;
     };
-  }, [clock, mode, sessionId]);
+  }, [clock, mode, sessionId, syncLogEnabled]);
 
   // The broadcast schedule is the authoritative live boundary. Viewer
   // duration may describe only a loaded segment while it is still buffering.

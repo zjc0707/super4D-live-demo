@@ -22,6 +22,10 @@ pnpm dev
 
 直播开始时间由 `/live` 的 `live_start=HH:mm` URL 参数控制，未提供时默认当天 17:00。
 
+同步调试日志默认关闭。在 URL 中增加 `sync_log=1`（例如
+`/live?live_start=17:00&sync_log=1` 或 `/replay?sync_log=1`）后，Demo 和
+iframe Viewer 才会输出 `[SUPER4D_SYNC]` 日志。该参数只控制日志，不影响同步通信。
+
 Viewer 使用 `/viewer/timtalk_test_1h` 线上资源。`VITE_VIEWER_ORIGIN` 可在 `.env` 中修改。Replay 的唯一可操作进度条位于 Demo 主页面；iframe 内 Viewer 使用 `noui=1` 隐藏自身播放控制。
 
 ## 字幕 iframe 接口

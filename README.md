@@ -4,13 +4,7 @@
 
 ## 启动
 
-先启动本地 `.4dv` 静态服务器（必须支持 CORS）：
-
-```bash
-npx http-server /Users/jcz/Downloads/timtalk-1h -p 5183 --cors
-```
-
-再启动 Viewer（当前 worktree）：
+先启动 Viewer（当前 worktree）：
 
 ```bash
 cd /Users/jcz/.codex/worktrees/e4b7/super4D-viewer
@@ -28,4 +22,17 @@ pnpm dev
 
 直播开始时间由 `/live` 的 `live_start=HH:mm` URL 参数控制，未提供时默认当天 17:00。
 
-`VITE_VIEWER_ORIGIN` 和 `VITE_VIEWER_CONTENT_URL` 可在 `.env` 中改为其他地址。Replay 的唯一可操作进度条位于 Demo 主页面；iframe 内 Viewer 使用 `noui=1` 隐藏自身播放控制。
+Viewer 使用 `/viewer/timtalk_test_1h` 线上资源。`VITE_VIEWER_ORIGIN` 可在 `.env` 中修改。Replay 的唯一可操作进度条位于 Demo 主页面；iframe 内 Viewer 使用 `noui=1` 隐藏自身播放控制。
+
+## 字幕 iframe 接口
+
+当 Viewer 使用 `sync=live` 或 `sync=replay` 加载时，父页面可在既有
+`SUPER4D_MEDIA_SYNC` 消息中发送以下命令（`payload` 仍需携带当前时钟字段）：
+
+- `SUBTITLE_SET_TRACK`：`{ trackId }`
+- `SUBTITLE_SET_VISIBLE`：`{ visible }`
+- `SUBTITLE_SET_MASK`：`{ maskVisible }`
+- `SUBTITLE_SET_FONT_SCALE`：`{ fontScale }`（0.5–2）
+- `SUBTITLE_SET_OFFSET`：`{ verticalOffset }`（0–30）
+
+Viewer 会返回 `SUBTITLE_STATE`，其中包含轨道的 `id/language/label` 和当前字幕显示状态；字幕源 URL 不会通过 iframe 协议暴露。Demo 页面已经使用这组接口提供字幕控制面板。

@@ -16,7 +16,7 @@ export class FakeMediaClock {
   private timer: number | null = null;
 
   constructor(
-    private readonly duration: number,
+    private duration: number,
     initialTime = 0,
     initialPlaying = false,
   ) {
@@ -77,6 +77,15 @@ export class FakeMediaClock {
   setPlaybackRate = (rate: number) => {
     this.commitAnchor();
     this.playbackRate = Math.max(0.25, Math.min(4, rate));
+    this.emit();
+  };
+
+  setDuration = (duration: number) => {
+    if (!Number.isFinite(duration) || duration <= 0 || Math.abs(duration - this.duration) < 0.001) return;
+    this.commitAnchor();
+    this.duration = duration;
+    this.anchorMediaTime = Math.min(this.anchorMediaTime, duration);
+    if (this.anchorMediaTime >= duration) this.playing = false;
     this.emit();
   };
 

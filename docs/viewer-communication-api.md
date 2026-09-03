@@ -5,7 +5,13 @@
 
 ## 1. 启用外部同步
 
-Demo 通过以下 URL 参数加载 Viewer：
+Demo 当前通过线上 Viewer 页面加载外部同步模式，基础地址为：
+
+```text
+https://www.4dv.ai/4dv-obs/timtalk_test_1h
+```
+
+在基础地址后追加以下 URL 参数：
 
 ```text
 sync=live|replay
@@ -25,7 +31,7 @@ test_start_time=<初始媒体时间，秒>
 - `test_start_time`：首次加载时选择正确的资源分段和初始时间，主要用于晚加入直播。
 - `sync_log=1`：可选，仅开启 Demo/Viewer 的 `[SUPER4D_SYNC]` 调试日志，不改变通信行为。
 
-Demo 当前 URL 组装位置：`src/App.tsx` 的 `viewerUrl`。
+Demo 当前 URL 组装位置：`App.tsx` 的 `viewerUrl`。
 
 ## 2. 统一消息格式
 
@@ -53,7 +59,7 @@ type SyncMessage = {
 - `type`：具体接口名称。
 - `payload`：接口参数或状态数据。
 
-定义位置：`src/protocol.ts` 和 Viewer 的 `src/controllers/sync/externalTimeSyncController.ts`。
+定义位置：Demo 的 `protocol.ts` 和 Viewer 外部同步 bridge 模块。
 
 ## 3. Demo → Viewer
 
@@ -183,7 +189,7 @@ Demo 将最近一条性能信息显示在同步诊断面板中。
 Demo 只接受同时满足以下条件的消息：
 
 1. `event.source === iframe.contentWindow`。
-2. `event.origin === VITE_VIEWER_ORIGIN` 的 origin。
+2. `event.origin` 等于当前 Viewer 配置的 origin。
 3. 通过 `isViewerMessage` 校验，`channel/version/type/payload` 合法。
 4. `sessionId` 和 `mode` 与当前 Demo 会话一致。
 5. `sequence` 大于上一次接收的 Viewer 序号。
@@ -232,8 +238,8 @@ iframe load
 
 ## 7. Demo 当前使用的接口实现位置
 
-- 协议类型、消息白名单和基础校验：`src/protocol.ts`
-- Demo iframe 握手、发送和接收：`src/syncController.ts`
-- Demo URL 组装、直播/录播控件和字幕面板：`src/App.tsx`
-- Viewer 外部同步 bridge：`super4D-viewer/src/controllers/sync/externalTimeSyncController.ts`
-- Viewer sort/render 同步诊断日志：`super4D-viewer/src/viewer.ts`
+- 协议类型、消息白名单和基础校验：Demo 的 `protocol.ts`
+- Demo iframe 握手、发送和接收：Demo 的 `syncController.ts`
+- Demo URL 组装、直播/录播控件和字幕面板：Demo 的 `App.tsx`
+- Viewer 外部同步 bridge：Viewer 的 external time sync controller 模块
+- Viewer sort/render 同步诊断日志：Viewer 的 viewer runtime 模块

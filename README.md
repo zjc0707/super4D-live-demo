@@ -4,17 +4,9 @@
 
 ## 启动
 
-先启动 Viewer（当前 worktree）：
+在 Demo 项目根目录启动 Demo：
 
 ```bash
-cd /Users/jcz/.codex/worktrees/e4b7/super4D-viewer
-pnpm exec vite --port 5181
-```
-
-再启动 Demo：
-
-```bash
-cd /Users/jcz/WebstormProjects/super4D-live-demo
 pnpm dev
 ```
 
@@ -28,7 +20,7 @@ iframe Viewer 才会输出 `[SUPER4D_SYNC]` 日志。该参数只控制日志，
 
 完整的 Demo/Viewer 通信接口说明见 [`docs/viewer-communication-api.md`](docs/viewer-communication-api.md)。
 
-Viewer 使用 `/viewer/timtalk_test_1h` 线上资源。`VITE_VIEWER_ORIGIN` 可在 `.env` 中修改。Replay 的唯一可操作进度条位于 Demo 主页面；iframe 内 Viewer 使用 `noui=1` 隐藏自身播放控制。
+Demo 当前嵌入线上 Viewer：`https://www.4dv.ai/4dv-obs/timtalk_test_1h`。Replay 的唯一可操作进度条位于 Demo 主页面；iframe 内 Viewer 使用 `noui=1` 隐藏自身播放控制。
 
 ## 字幕 iframe 接口
 

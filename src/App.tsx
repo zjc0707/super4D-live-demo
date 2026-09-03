@@ -4,8 +4,10 @@ import { makeSessionId, type SubtitleState } from "./protocol";
 import { MediaSyncController } from "./syncController";
 import "./styles.css";
 
-const VIEWER_ORIGIN = import.meta.env.VITE_VIEWER_ORIGIN || "http://localhost:5173";
-const VIEWER_PATH = "/viewer/timtalk_test_1h";
+// const VIEWER_ORIGIN = import.meta.env.VITE_VIEWER_ORIGIN || "http://localhost:5173";
+// const VIEWER_PATH = "/viewer/timtalk_test_1h";
+const VIEWER_ORIGIN = 'https://www.4dv.ai'
+const VIEWER_PATH = "/4dv-obs/timtalk_test_1h"
 const REPLAY_DURATION = 60 * 60;
 const LIVE_DURATION = 60 * 60;
 
@@ -155,7 +157,10 @@ const DemoPage = ({ mode }: { mode: "live" | "replay" }) => {
   useEffect(() => {
     if (!liveEnded) {
       endNotifiedRef.current = false;
-      setViewerClosed(false);
+      // Keep an already-expired broadcast closed before the Viewer has sent
+      // its duration. Re-open it only when the schedule is changed back into
+      // the valid broadcast window.
+      if (snapshot.currentTime < snapshot.duration) setViewerClosed(false);
       return;
     }
     if (endNotifiedRef.current) return;

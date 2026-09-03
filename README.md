@@ -36,3 +36,19 @@ Viewer 使用 `/viewer/timtalk_test_1h` 线上资源。`VITE_VIEWER_ORIGIN` 可�
 - `SUBTITLE_SET_OFFSET`：`{ verticalOffset }`（0–30）
 
 Viewer 会返回 `SUBTITLE_STATE`，其中包含轨道的 `id/language/label` 和当前字幕显示状态；字幕源 URL 不会通过 iframe 协议暴露。Demo 页面已经使用这组接口提供字幕控制面板。
+
+## 性能信息接口
+
+Viewer 会周期性返回 `PERFORMANCE_INFO`，消息结构仍遵循
+`SUPER4D_MEDIA_SYNC` 的 `channel/version/sessionId/sequence/mode/type/payload`
+封装。`payload.performance` 包含：
+
+- `renderFPS`：渲染帧率
+- `sortingFPS`：排序帧率
+- `sortTimeConsuming`：单次排序耗时，单位毫秒
+- `sortTimeOffset`：排序时间相对当前媒体时间的偏移，单位毫秒
+- `renderCount`：当前渲染的 splat 数量
+- `drawCalls`：当前 draw call 数量
+- `sortingEngine`、`renderEngine`：当前排序和渲染引擎
+
+Demo 的同步诊断面板会展示最近一次 `PERFORMANCE_INFO` 数据。

@@ -3,13 +3,14 @@ export const SYNC_VERSION = 1 as const;
 
 export type SyncMode = "live" | "replay";
 export type ParentMessageType = "INIT" | "SYNC_STATE" | "PLAY" | "PAUSE" | "RATE_CHANGE" | "SEEK_BEGIN" | "SEEK_COMMIT" | "END" | "SUBTITLE_SET_TRACK" | "SUBTITLE_SET_VISIBLE" | "SUBTITLE_SET_MASK" | "SUBTITLE_SET_FONT_SCALE" | "SUBTITLE_SET_OFFSET";
-export type ViewerMessageType = "SYNC_READY" | "VIEWER_TIME" | "VIEWER_STATE" | "LOADING" | "ERROR" | "ENDED" | "SUBTITLE_STATE";
+export type ViewerMessageType = "SYNC_READY" | "VIEWER_TIME" | "VIEWER_STATE" | "LOADING" | "ERROR" | "ENDED" | "SUBTITLE_STATE" | "PERFORMANCE_INFO";
 const PARENT_MESSAGE_TYPES: readonly ParentMessageType[] = ["INIT", "SYNC_STATE", "PLAY", "PAUSE", "RATE_CHANGE", "SEEK_BEGIN", "SEEK_COMMIT", "END", "SUBTITLE_SET_TRACK", "SUBTITLE_SET_VISIBLE", "SUBTITLE_SET_MASK", "SUBTITLE_SET_FONT_SCALE", "SUBTITLE_SET_OFFSET"];
-const VIEWER_MESSAGE_TYPES: readonly ViewerMessageType[] = ["SYNC_READY", "VIEWER_TIME", "VIEWER_STATE", "LOADING", "ERROR", "ENDED", "SUBTITLE_STATE"];
+const VIEWER_MESSAGE_TYPES: readonly ViewerMessageType[] = ["SYNC_READY", "VIEWER_TIME", "VIEWER_STATE", "LOADING", "ERROR", "ENDED", "SUBTITLE_STATE", "PERFORMANCE_INFO"];
+export type PerformanceInfo = { renderFPS: number; sortingFPS: number; sortTimeConsuming: number; sortTimeOffset: number; renderCount: number; drawCalls: number; sortingEngine: string; renderEngine: string };
 export type SubtitleState = { tracks: Array<{ id: string; language: string; label: string }>; selectedTrackId: string; visible: boolean; maskVisible: boolean; fontScale: number; verticalOffset: number; error: string | null };
-export type SyncPayload = { mediaTime?: number; sentAt?: number; playing?: boolean; playbackRate?: number; duration?: number; currentTime?: number; loading?: boolean; error?: string; subtitle?: SubtitleState; trackId?: string; visible?: boolean; maskVisible?: boolean; fontScale?: number; verticalOffset?: number };
+export type SyncPayload = { mediaTime?: number; sentAt?: number; playing?: boolean; playbackRate?: number; duration?: number; currentTime?: number; loading?: boolean; error?: string; subtitle?: SubtitleState; performance?: PerformanceInfo; trackId?: string; visible?: boolean; maskVisible?: boolean; fontScale?: number; verticalOffset?: number };
 export type SyncMessage = { channel: typeof SYNC_CHANNEL; version: typeof SYNC_VERSION; sessionId: string; sequence: number; mode: SyncMode; type: ParentMessageType | ViewerMessageType; payload?: SyncPayload };
-export type ViewerStatus = { ready: boolean; loading: boolean; currentTime: number | null; duration: number | null; lastMessage: string; error: string | null; lastSequence: number; subtitle: SubtitleState };
+export type ViewerStatus = { ready: boolean; loading: boolean; currentTime: number | null; duration: number | null; lastMessage: string; error: string | null; lastSequence: number; subtitle: SubtitleState; performance: PerformanceInfo | null };
 
 export const isSyncMessage = (value: unknown): value is SyncMessage => {
   if (!value || typeof value !== "object") return false;
@@ -24,6 +25,12 @@ export const isViewerMessage = (value: unknown): value is SyncMessage => {
     if (payload[key] !== undefined && (typeof payload[key] !== "number" || !Number.isFinite(payload[key]) || payload[key] < 0)) return false;
   }
   if (payload.loading !== undefined && typeof payload.loading !== "boolean") return false;
+  if (payload.performance !== undefined) {
+    for (const key of ["renderFPS", "sortingFPS", "sortTimeConsuming", "sortTimeOffset", "renderCount", "drawCalls"] as const) {
+      if (typeof payload.performance[key] !== "number" || !Number.isFinite(payload.performance[key])) return false;
+    }
+    if (typeof payload.performance.sortingEngine !== "string" || typeof payload.performance.renderEngine !== "string") return false;
+  }
   return true;
 };
 

@@ -32,7 +32,7 @@ const useClock = (clock: FakeMediaClock) => {
 };
 
 const defaultSubtitle: SubtitleState = { tracks: [], selectedTrackId: "", visible: true, maskVisible: false, fontScale: 1, verticalOffset: 0, error: null };
-const defaultStatus: ReturnType<MediaSyncController["getStatus"]> = { ready: false, loading: false, currentTime: null, duration: null, lastMessage: "等待 iframe", error: null, lastSequence: -1, subtitle: defaultSubtitle };
+const defaultStatus: ReturnType<MediaSyncController["getStatus"]> = { ready: false, loading: false, currentTime: null, duration: null, lastMessage: "等待 iframe", error: null, lastSequence: -1, subtitle: defaultSubtitle, performance: null };
 
 const SyncDiagnostics = ({ status, snapshot, sessionId }: { status: ReturnType<MediaSyncController["getStatus"]>; snapshot: ClockSnapshot; sessionId: string }) => {
   const error = status.currentTime === null ? null : snapshot.currentTime - status.currentTime;
@@ -44,6 +44,7 @@ const SyncDiagnostics = ({ status, snapshot, sessionId }: { status: ReturnType<M
     <div>Viewer：{status.ready ? "ready" : "等待中"} / {status.loading ? "loading" : "idle"}</div>
     <div>sequence：{status.lastSequence}</div>
     <div>最近消息：{status.lastMessage}</div>
+    {status.performance ? <div>性能：渲染 {status.performance.renderFPS.toFixed(1)} FPS / 排序 {status.performance.sortingFPS.toFixed(1)} FPS / 排序耗时 {status.performance.sortTimeConsuming.toFixed(1)} ms / 偏移 {status.performance.sortTimeOffset.toFixed(1)} ms / draw calls {status.performance.drawCalls} / splats {status.performance.renderCount} / {status.performance.sortingEngine} / {status.performance.renderEngine}</div> : <div>性能：等待 Viewer 数据</div>}
     <div className="session">sessionId：{sessionId}</div>
     {status.error ? <div className="error">{status.error}</div> : null}
   </aside>;

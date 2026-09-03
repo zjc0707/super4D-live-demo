@@ -1,5 +1,5 @@
 import type { ClockSnapshot, FakeMediaClock } from "./clock";
-import { isViewerMessage, SYNC_CHANNEL, SYNC_VERSION, type SubtitleState, type SyncMessage, type SyncMode, type ViewerStatus } from "./protocol";
+import { isViewerMessage, SYNC_CHANNEL, SYNC_VERSION, type PerformanceInfo, type SubtitleState, type SyncMessage, type SyncMode, type ViewerStatus } from "./protocol";
 
 type Listener = () => void;
 
@@ -13,7 +13,7 @@ export class MediaSyncController {
   private lastSyncStateSentAt = 0;
   private readonly listeners = new Set<Listener>();
   private readonly normalizedViewerOrigin: string;
-  private status: ViewerStatus = { ready: false, loading: false, currentTime: null, duration: null, lastMessage: "等待 Viewer iframe 加载", error: null, lastSequence: -1, subtitle: { tracks: [], selectedTrackId: "", visible: true, maskVisible: false, fontScale: 1, verticalOffset: 0, error: null } };
+  private status: ViewerStatus = { ready: false, loading: false, currentTime: null, duration: null, lastMessage: "等待 Viewer iframe 加载", error: null, lastSequence: -1, subtitle: { tracks: [], selectedTrackId: "", visible: true, maskVisible: false, fontScale: 1, verticalOffset: 0, error: null }, performance: null };
 
   constructor(private readonly iframe: HTMLIFrameElement, viewerOrigin: string, private readonly mode: SyncMode, private readonly sessionId: string, private readonly clock: FakeMediaClock) {
     const parsed = new URL(viewerOrigin);
@@ -45,7 +45,7 @@ export class MediaSyncController {
     this.lastViewerSequence = -1;
     this.viewerResponded = false;
     this.lastSyncStateSentAt = 0;
-    this.status = { ...this.status, ready: false, loading: false, currentTime: null, duration: null, lastMessage: "iframe 已重新加载，发送 INIT", error: null, lastSequence: -1 };
+    this.status = { ...this.status, ready: false, loading: false, currentTime: null, duration: null, lastMessage: "iframe 已重新加载，发送 INIT", error: null, lastSequence: -1, performance: null };
     this.log("iframe-load", { mode: this.mode, sessionId: this.sessionId, viewerOrigin: this.normalizedViewerOrigin, clockTime: this.clock.getSnapshot().currentTime });
     this.status = { ...this.status, lastMessage: "iframe 已加载，发送 INIT" };
     this.emit();
@@ -80,7 +80,8 @@ export class MediaSyncController {
         ? payload.loading
         : this.status.loading;
     const subtitle = payload.subtitle && Array.isArray(payload.subtitle.tracks) && typeof payload.subtitle.selectedTrackId === "string" ? payload.subtitle : this.status.subtitle;
-    this.status = { ...this.status, ready: this.status.ready || message.type === "SYNC_READY", loading, currentTime: typeof payload.currentTime === "number" ? payload.currentTime : this.status.currentTime, duration: message.type === "SYNC_READY" && typeof payload.duration === "number" ? payload.duration : this.status.duration, error: message.type === "ERROR" ? String(payload.error || "Viewer error") : this.status.error, lastMessage: message.type, lastSequence: message.sequence, subtitle };
+    const performance = payload.performance && typeof payload.performance.renderFPS === "number" ? payload.performance as PerformanceInfo : this.status.performance;
+    this.status = { ...this.status, ready: this.status.ready || message.type === "SYNC_READY", loading, currentTime: typeof payload.currentTime === "number" ? payload.currentTime : this.status.currentTime, duration: message.type === "SYNC_READY" && typeof payload.duration === "number" ? payload.duration : this.status.duration, error: message.type === "ERROR" ? String(payload.error || "Viewer error") : this.status.error, lastMessage: message.type, lastSequence: message.sequence, subtitle, performance };
     this.emit();
     // The initial INIT can arrive while the Viewer is still constructing its
     // timeline.  Re-send the current anchor once it confirms readiness so a
